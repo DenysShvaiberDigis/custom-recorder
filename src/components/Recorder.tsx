@@ -7,26 +7,8 @@ import {
   RECORD_TIME,
   VIDEO_CONSTRAINS,
 } from '../constants/constants';
+import { HTMLMediaElementWithCaptureStream, RecorderProps } from './Recorder.types';
 import styles from './Recorder.module.scss';
-
-type HTMLMediaElementWithCaptureStream = HTMLMediaElement & {
-  captureStream(): MediaStream;
-  mozCaptureStream(): MediaStream;
-};
-
-type RecorderProps = {
-  recordTime?: number;
-  setRecordedChunks: (chunks: Blob[]) => void;
-  recordedVid: string;
-  setRecordedVid: (videoURL: string) => void;
-  capturing: boolean;
-  setCapturing: (capturing: boolean) => void;
-  recordingTimeMS: number;
-  setRecordingTimeMS: (time: number) => void;
-  hasStartedRecording: boolean;
-  setStartedRecording: (started: boolean) => void;
-  setIsError: (error: boolean) => void;
-};
 
 export const Recorder: React.FC<RecorderProps> = ({
   recordTime = RECORD_TIME,

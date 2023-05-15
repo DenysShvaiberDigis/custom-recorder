@@ -5,6 +5,8 @@ export type RecorderProps = {
   setRecordedVid: (videoURL: string) => void;
   capturing: boolean;
   setCapturing: (capturing: boolean) => void;
+  recordingTimeMS: number;
+  setRecordingTimeMS: (time: number) => void;
   hasStartedRecording: boolean;
   setStartedRecording: (started: boolean) => void;
   setIsError: (error: boolean) => void;
