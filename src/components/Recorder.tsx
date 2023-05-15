@@ -72,44 +72,50 @@ export const Recorder: React.FC<RecorderProps> = ({
         stopVideoHandler();
       };
     }
-  }, [capturing]);
+  }, [capturing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (recordingTimeMS <= 0) {
       stopVideoHandler();
     }
-  }, [recordingTimeMS]);
+  }, [recordingTimeMS]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRecording = async (stream: MediaStream, lengthInMS: number) => {
-    setCapturing(true);
-    setRecordingTimeMS(recordTime);
+    try {
+      setCapturing(true);
+      setRecordingTimeMS(recordTime);
 
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm',
-    });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm',
+      });
 
-    const data: Blob[] = [];
+      const data: Blob[] = [];
 
-    mediaRecorder.ondataavailable = (event) => data.push(event.data);
-    mediaRecorder.onstop = () => {
-      setRecordedChunks(data);
-      const recordedBlob = new Blob(data, { type: 'video/webm' });
-      const videoURL = URL.createObjectURL(recordedBlob);
-      setRecordedVid(videoURL);
-      setCounter(recordingTimeMS);
-    };
-    mediaRecorder.onerror = (event: Event) =>
-      console.error('MediaRecorder error:', event);
+      mediaRecorder.ondataavailable = (event) => data.push(event.data);
+      mediaRecorder.onstop = () => {
+        setRecordedChunks(data);
+        const recordedBlob = new Blob(data, { type: 'video/webm' });
+        const videoURL = URL.createObjectURL(recordedBlob);
+        setRecordedVid(videoURL);
+        setCounter(recordingTimeMS);
+      };
+      mediaRecorder.onerror = (event: Event) =>
+        console.error('MediaRecorder error:', event);
 
-    mediaRecorder.start();
+      mediaRecorder.start();
 
-    const recorded = wait(lengthInMS).then(() => {
-      if (mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
+      const recorded = wait(lengthInMS).then(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      });
+
+      await recorded;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(error);
       }
-    });
-
-    await recorded;
+    }
   };
 
   const stopRecording = (stream: MediaStream | null) => {
@@ -122,53 +128,42 @@ export const Recorder: React.FC<RecorderProps> = ({
     return new Promise<void>((resolve) => setTimeout(resolve, delayInMS));
   };
 
-  const recordVideoHandler = () => {
-    setStartedRecording(true);
+  const recordVideoHandler = async () => {
+    try {
+      setStartedRecording(true);
 
-    navigator.mediaDevices
-      .getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: VIDEO_CONSTRAINS,
         audio: true,
-      })
-      .then((stream) => {
+      });
+
+      if (webcamRef.current) {
+        webcamRef.current.srcObject = stream;
+        webcamRef.current.captureStream =
+          webcamRef.current.captureStream || webcamRef.current.mozCaptureStream;
+      }
+
+      await new Promise<void>((resolve) => {
         if (webcamRef.current) {
-          webcamRef.current.srcObject = stream;
-          webcamRef.current.captureStream =
-            webcamRef.current.captureStream ||
-            webcamRef.current.mozCaptureStream;
-        }
-        return new Promise<void>((resolve) => {
-          if (webcamRef.current) {
-            webcamRef.current.onplaying = () => resolve();
-          }
-        });
-      })
-      .then(() => {
-        if (webcamRef.current) {
-          return startRecording(
-            webcamRef.current.captureStream(),
-            recordingTimeMS
-          );
-        }
-      })
-      .then((recordedData) => {
-        if (recordedData) {
-          setRecordedChunks(recordedData);
-          const recordedBlob = new Blob(recordedData, { type: 'video/webm' });
-          const videoURL = URL.createObjectURL(recordedBlob);
-          setRecordedVid(videoURL);
-        }
-      })
-      .catch((error) => {
-        console.error('Video error: ', error);
-        if (error.name === 'NotFoundError') {
-          // Handle NotFoundError
-        } else {
-          if (error.message.includes('Permission denied')) {
-            setIsError(true);
-          }
+          webcamRef.current.onplaying = () => resolve();
         }
       });
+
+      if (webcamRef.current) {
+        await startRecording(
+          webcamRef.current.captureStream(),
+          recordingTimeMS
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+          setIsError(true);
+        } else {
+          console.error(error);
+        }
+      }
+    }
   };
 
   const stopVideoHandler = () => {
@@ -178,16 +173,7 @@ export const Recorder: React.FC<RecorderProps> = ({
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '70vh',
-        textAlign: 'center',
-      }}
-    >
+    <Box className={styles.mainWrapper}>
       <div className={styles.videoContainer}>
         <div
           className={styles.recordedVid}
@@ -256,7 +242,7 @@ export const Recorder: React.FC<RecorderProps> = ({
                 onClick={recordVideoHandler}
               >
                 Start Recording
-              </div>{' '}
+              </div>
             </>
           )}
         </div>
